@@ -31,6 +31,7 @@ class ViewController: UIViewController {
     private var currentAlbumData : (titles:[String], values:[String])?
     private var currentAlbumIndex = 0
     
+    @IBOutlet weak var scroller: HorizontalScroller!
 	override func viewDidLoad() {
 		super.viewDidLoad()
         
@@ -44,7 +45,23 @@ class ViewController: UIViewController {
         view.addSubview(dataTable!)
         
         showDataForAlbum(currentAlbumIndex)
+        
+        scroller.delegate = self
+        reloadScroller()
 	}
+    
+    func reloadScroller() {
+        allAlbums = LibraryAPI.sharedInstance.getAlbums()
+        
+        if currentAlbumIndex < 0 {
+            currentAlbumIndex = 0
+        } else if currentAlbumIndex >= allAlbums.count {
+            currentAlbumIndex = allAlbums.count - 1
+        }
+            
+        scroller.reload()
+        showDataForAlbum(currentAlbumIndex)
+    }
     
     func showDataForAlbum(albumIndex: Int) {
         if albumIndex < allAlbums.count && albumIndex > -1 {
@@ -90,4 +107,33 @@ extension ViewController : UITableViewDataSource {
 
 extension ViewController : UITableViewDelegate {
     
+}
+
+extension ViewController : HorizontalScrollerDeletgate {
+    func horizontalScrollerClickedViewAtIndex(scroller: HorizontalScroller, index: Int) {
+        let previousAlbumView = scroller.viewAtIndex(currentAlbumIndex) as! AlbumView
+        previousAlbumView.highlightAlbum(false)
+        currentAlbumIndex = index
+        let albumView = scroller.viewAtIndex(index) as! AlbumView
+        albumView.highlightAlbum(true)
+        
+        showDataForAlbum(index)
+    }
+    
+    func numberOfViewsForHorizontalScoller(scroller: HorizontalScroller) -> Int {
+        return allAlbums.count
+    }
+    
+    func horizontalScrollerViewAtIndex(scroller: HorizontalScroller, index: Int) -> UIView {
+        let album = allAlbums[index]
+        let albumView = AlbumView(frame: CGRect(x: 0, y:0, width: 100, height:100), albumCover: album.coverUrl)
+        
+        if currentAlbumIndex == index {
+            albumView.highlightAlbum(true)
+        } else {
+            albumView.highlightAlbum(false)
+        }
+        
+        return albumView
+    }
 }
