@@ -8,7 +8,7 @@
 
 import UIKit
 
-class Album: NSObject {
+class Album: NSObject, NSCoding {
     var title: String!
     var artist: String!
     var genre: String!
@@ -23,6 +23,24 @@ class Album: NSObject {
         self.genre = genre
         self.coverUrl = coverUrl
         self.year = year
+    }
+    
+    required init(coder decoder: NSCoder) {
+        super.init()
+        
+        self.title = decoder.decodeObjectForKey("title") as! String
+        self.artist = decoder.decodeObjectForKey("artist") as! String
+        self.genre = decoder.decodeObjectForKey("genre") as! String
+        self.coverUrl = decoder.decodeObjectForKey("coverUrl") as! String
+        self.year = decoder.decodeObjectForKey("year") as! String
+    }
+    
+    func encodeWithCoder(aCoder: NSCoder) {
+        aCoder.encodeObject(title, forKey: "title")
+        aCoder.encodeObject(artist, forKey: "artist")
+        aCoder.encodeObject(genre, forKey: "genre")
+        aCoder.encodeObject(coverUrl, forKey: "coverUrl")
+        aCoder.encodeObject(year, forKey: "year")
     }
     
     //string representation of the Album's attributes

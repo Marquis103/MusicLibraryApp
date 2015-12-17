@@ -31,6 +31,8 @@ class ViewController: UIViewController {
     private var currentAlbumData : (titles:[String], values:[String])?
     private var currentAlbumIndex = 0
     
+    var undoStack:[(Album, Int)] = []
+    
     @IBOutlet weak var scroller: HorizontalScroller!
 	override func viewDidLoad() {
 		super.viewDidLoad()
@@ -50,6 +52,13 @@ class ViewController: UIViewController {
         
         scroller.delegate = self
         reloadScroller()
+        
+        let undoButton = UIBarButtonItem(barButtonSystemItem: .Undo, target: self, action:"undoAction")
+        undoButton.enabled = false
+        let space = UIBarButtonItem(barButtonSystemItem: .FlexibleSpace, target:nil, action:nil)
+        let trashButton = UIBarButtonItem(barButtonSystemItem: .Trash, target: self, action: "deleteAlbum")
+        let toolbarButtonItems = [undoButton, space, trashButton]
+        toolbar.setItems(toolbarButtonItems, animated: true)
         
         NSNotificationCenter.defaultCenter().addObserver(self, selector: "saveCurrentState", name: UIApplicationDidEnterBackgroundNotification, object: nil)
 	}
@@ -83,6 +92,42 @@ class ViewController: UIViewController {
     func initialViewIndex(scroller: HorizontalScroller) -> Int {
         return currentAlbumIndex
     }
+    
+    func addAlbumAtIndex(album: Album, index: Int) {
+        LibraryAPI.sharedInstance.addAlbum(album, index: index)
+        currentAlbumIndex = index
+        reloadScroller()
+    }
+    
+    func deleteAlbum() {
+        let deletedAlbum:Album = allAlbums[currentAlbumIndex]
+        let undoAction = (deletedAlbum, currentAlbumIndex)
+        undoStack.insert(undoAction, atIndex: 0)
+        LibraryAPI.sharedInstance.deleteAlbum(currentAlbumIndex)
+        reloadScroller()
+        let barButtonItems = toolbar.items! 
+        let undoButton : UIBarButtonItem = barButtonItems[0]
+        undoButton.enabled = true
+        if allAlbums.count == 0 {
+            let trashButton : UIBarButtonItem = barButtonItems[2]
+            trashButton.enabled = true
+        }
+    }
+    
+    func undoAction() {
+        let barButtonItems = toolbar.items!
+        if undoStack.count > 0 {
+            let (deletedAlbum, index) = undoStack.removeAtIndex(0)
+            
+            if undoStack.count == 0 {
+                let undoButton : UIBarButtonItem = barButtonItems[0]
+                undoButton.enabled = false
+            }
+            
+            let trashButton : UIBarButtonItem = barButtonItems[2]
+            trashButton.enabled = true
+        }
+    }
 
 	override func didReceiveMemoryWarning() {
 		super.didReceiveMemoryWarning()
@@ -95,6 +140,7 @@ class ViewController: UIViewController {
         //they left it.  In order to do this we need to save the currently displayed album.
         //Since it's only one piece of information we can use NSUserDefaults
         NSUserDefaults.standardUserDefaults().setInteger(currentAlbumIndex, forKey: "currentAlbumIndex")
+        LibraryAPI.sharedInstance.saveAlbums()
     }
     
     func loadPreviousState() {
