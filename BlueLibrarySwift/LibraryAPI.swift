@@ -23,6 +23,8 @@ class LibraryAPI: NSObject {
         isOnline = false
         
         super.init()
+        
+        NSNotificationCenter.defaultCenter().addObserver(self, selector: "downloadImage:", name: "BLDownloadImageNotification", object: nil)
     }
     
     //:MARK - LibraryAPI Facade
@@ -44,5 +46,30 @@ class LibraryAPI: NSObject {
         if isOnline {
             httpClient.postRequest("/api/deleteAlbum", body: ("\(index)"))
         }
+    }
+    
+    func downloadImage(notification: NSNotification) {
+        let userInfo = notification.userInfo as! [String: AnyObject]
+        let imageView = userInfo["imageView"] as! UIImageView?
+        let coverUrl = userInfo["coverUrl"] as! String
+        let url = NSURL(string: coverUrl)
+        
+        if let imageViewUnwrapped = imageView {
+            imageViewUnwrapped.image = persistencyManager.getImage((url?.lastPathComponent)!)
+            if imageViewUnwrapped.image == nil {
+                dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), { () -> Void in
+                    let downloadedImage = self.httpClient.downloadImage(coverUrl as String)
+                    
+                    dispatch_sync(dispatch_get_main_queue(), { () -> Void in
+                        imageViewUnwrapped.image = downloadedImage
+                        self.persistencyManager.saveImage(downloadedImage, filename: (url?.lastPathComponent)!)
+                    })
+                })
+            }
+        }
+    }
+    
+    deinit {
+        NSNotificationCenter.defaultCenter().removeObserver(self)
     }
 }
